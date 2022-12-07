@@ -37,12 +37,20 @@ foreach (var line in inputText.Skip(1))
     }
 }
 
+var sizeDirectoryToDelete = fileTree
+    .SizeOfDirectoryToDeleteToFreeSpace(new List<long>())
+    .OrderBy(x => x)
+    .FirstOrDefault(x => fileTree.FreeDiskSpace + x >= fileTree.MinimumFreeDiskSpace);
+
 Console.WriteLine($"Sum of dirs under 100000 is {fileTree.TotalSumOfDirsUnder100000()}");
+Console.WriteLine($"Size of directory to delete: {sizeDirectoryToDelete}");
 Console.ReadLine();
 
 
 public class TreeNode
 {
+    private readonly long _totalDiskSpace = 70000000;
+    private readonly long _minimumFreeDiskSpace = 30000000;
     private readonly string _name;
     private readonly long _size;
     private readonly bool _isDir;
@@ -62,12 +70,14 @@ public class TreeNode
         _parent = parent;
     }
 
+    public long MinimumFreeDiskSpace => _minimumFreeDiskSpace;
     public int Count { get { return _children.Count; } }
     public bool IsRoot { get { return _parent == null; } }
     public string Name { get { return _name; } }
     public bool IsDir { get { return _isDir; } }
     public long Size { get { return _size != 0 ? _size : _children.Sum(x => x.Size); } }
     public TreeNode Parent { get { return _parent; } }
+    public long FreeDiskSpace => IsRoot ? _totalDiskSpace - Size : 0;
     public List<TreeNode> Children { get { return _children; } }
 
     public TreeNode this[int key]
@@ -105,5 +115,17 @@ public class TreeNode
             if (child.Children.Any(x => x.IsDir)) sum = child.TotalSumOfDirsUnder100000(sum);
         }
         return sum;
+    }
+
+    public List<long> SizeOfDirectoryToDeleteToFreeSpace(List<long> listOfDirectories)
+    {
+        int i = 0, l = Count;
+        for (; i < l; ++i)
+        {
+            TreeNode child = _children[i];
+            if (child.IsDir) listOfDirectories.Add(child.Size);
+            if (child.Children.Any(x => x.IsDir)) listOfDirectories = child.SizeOfDirectoryToDeleteToFreeSpace(listOfDirectories);
+        }
+        return listOfDirectories;
     }
 }
